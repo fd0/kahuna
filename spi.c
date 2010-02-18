@@ -19,9 +19,9 @@ static void spi_device_reset(void)
     SPI_PORT &= ~_BV(SPI_SCK);
 
     /* un-reset device, wait, reset device again */
-    SPI_PORT |= _BV(SPI_SS);
+    SPI_PORT |= _BV(SPI_CS);
     spi_delay();
-    SPI_PORT &= ~_BV(SPI_SS);
+    SPI_PORT &= ~_BV(SPI_CS);
 }
 
 static uint8_t spi_magicbytes(void)
@@ -44,19 +44,24 @@ static uint8_t spi_magicbytes(void)
 void spi_enable(void)
 {
     /* configure MOSI, SCK and SS as output and MISO as input */
-    SPI_DDR |= _BV(SPI_MOSI) | _BV(SPI_SCK) | _BV(SPI_SS);
+    SPI_DDR |= _BV(SPI_MOSI) | _BV(SPI_SCK) | _BV(SPI_CS);
     SPI_DDR &= ~_BV(SPI_MISO);
 
     /* set SS high, SCK and MOSI low and MISO pullup off */
-    SPI_PORT |= _BV(SPI_SS);
+    SPI_PORT |= _BV(SPI_CS);
     SPI_PORT &= ~(_BV(SPI_MOSI) | _BV(SPI_SCK) | _BV(SPI_MISO));
 
     /* initialize spi hardware, prescaler 128 */
     SPCR = _BV(SPE) | _BV(MSTR) | _BV(SPR0) | _BV(SPR1);
     SPSR = _BV(SPIF);
 
+    /* if CS pin is not on SS pin, enable pullup for SS pin */
+#if SPI_CS != SPI_SS
+    SPI_PORT |= _BV(SPI_SS);
+#endif
+
     /* reset device */
-    SPI_PORT &= ~_BV(SPI_SS);
+    SPI_PORT &= ~_BV(SPI_CS);
 }
 
 void spi_disable(void)
@@ -65,8 +70,8 @@ void spi_disable(void)
     SPCR = 0;
 
     /* configure all pins as inputs */
-    SPI_DDR &= ~(_BV(SPI_MOSI) | _BV(SPI_SCK) | _BV(SPI_SS) | _BV(SPI_MISO));
-    SPI_PORT &= ~(_BV(SPI_MOSI) | _BV(SPI_SCK) | _BV(SPI_SS) | _BV(SPI_MISO));
+    SPI_DDR &= ~(_BV(SPI_MOSI) | _BV(SPI_SCK) | _BV(SPI_CS) | _BV(SPI_MISO));
+    SPI_PORT &= ~(_BV(SPI_MOSI) | _BV(SPI_SCK) | _BV(SPI_CS) | _BV(SPI_MISO));
 }
 
 /* returns 0 if device has been put into programming mode, 1 otherwise */
