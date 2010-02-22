@@ -47,17 +47,17 @@ int main(void)
     LED1_OFF();
     LED2_OFF();
 
-    /* initialize usb pins */
-    usb_init();
-
-    /* enable interrupts */
-    sei();
-
     /* disconnect for ~500ms, so that the host re-enumerates this device */
     usb_disable();
     for (uint8_t i = 0; i < 38; i++)
         _delay_loop_2(0); /* 0 means 0x10000, 38*1/f*0x10000 =~ 498ms */
     usb_enable();
+
+    /* initialize usb pins */
+    usb_init();
+
+    /* enable interrupts */
+    sei();
 
     /* init timer */
     timer_init();
