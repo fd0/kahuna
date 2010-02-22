@@ -69,6 +69,11 @@
                                    } while(0);
 #endif
 
+/* serial number */
+PROGMEM int usbDescriptorStringSerialNumber[] = {
+    USB_STRING_DESCRIPTOR_HEADER(10),
+    'S', 'e', 'r', 'i', 'a', 'l', 't', 'e', 's', 't'
+};
 
 /* programmer state and options */
 enum mode_t {
