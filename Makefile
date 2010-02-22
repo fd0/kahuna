@@ -38,7 +38,7 @@ INCLUDES = . usbdrv/
 
 
 # use more debug-flags when compiling
-DEBUG = 1
+DEBUG = 0
 
 
 # avrdude programmer protocol
@@ -51,8 +51,6 @@ AVRDUDE_FLAGS =
 # magic for usb serial
 USB_SERIAL_TEXT=$(shell echo $(USB_SERIAL) | sed "s/./'\\0',/g")
 USB_SERIAL_LEN=$(shell echo -n $(USB_SERIAL) | wc -c)
-
-CFLAGS += -DHARDWARE="$(HARDWARE)" -DUSB_SERIAL="$(USB_SERIAL_TEXT)" -DUSB_SERIAL_LEN="$(USB_SERIAL_LEN)"
 
 ####################################################
 # 'make' configuration
@@ -98,6 +96,10 @@ ifeq ($(DEBUG),1)
 	CFLAGS += -Wa,-adhlns=$(basename $@).lst
 	CFLAGS += -DDEBUG
 endif
+
+# set hardware platform and usb serial number
+CFLAGS += "-DHARDWARE_$(HARDWARE)" -DUSB_SERIAL="$(USB_SERIAL_TEXT)" -DUSB_SERIAL_LEN="$(USB_SERIAL_LEN)"
+ASFLAGS += "-DHARDWARE_$(HARDWARE)" -DUSB_SERIAL="$(USB_SERIAL_TEXT)" -DUSB_SERIAL_LEN="$(USB_SERIAL_LEN)"
 
 ####################################################
 # avrdude configuration
@@ -158,6 +160,7 @@ program-eeprom-%: %.eep.hex
 	$(OBJCOPY) -O ihex -R .eeprom $< $@
 	@echo "========================================"
 	@echo "$@ compiled for: $(MCU)"
+	@echo "for hardware $(HARDWARE)"
 	@echo -n "size for $< is "
 	@$(SIZE) -A $@ | grep '\.sec1' | tr -s ' ' | cut -d" " -f2
 	@echo "========================================"

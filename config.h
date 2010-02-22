@@ -8,19 +8,56 @@
 /* uncomment this for debug information via uart */
 //#define DEBUG_UART
 
-/* isp pins */
-#define SPI_PORTNAME    B
-#define SPI_SS      PB2
-#define SPI_MOSI    PB3
-#define SPI_MISO    PB4
-#define SPI_SCK     PB5
-#define SPI_CS      PB0
+#ifdef HARDWARE_kahuna
+    /* isp pins */
+    #define SPI_PORTNAME    B
+    #define SPI_SS      PB2
+    #define SPI_MOSI    PB3
+    #define SPI_MISO    PB4
+    #define SPI_SCK     PB5
+    #define SPI_CS      PB0
 
-/* led pins */
-#define LED1_PORTNAME   C
-#define LED1_PIN        PC1
-#define LED2_PORTNAME   C
-#define LED2_PIN        PC0
+    /* led pins */
+    #define LED1_PORTNAME   C
+    #define LED1_PIN        PC1
+    #define LED2_PORTNAME   C
+    #define LED2_PIN        PC0
+
+    /* usb */
+    #define USB_CFG_IOPORTNAME      D
+    #define USB_CFG_DMINUS_BIT      4
+    #define USB_CFG_DPLUS_BIT       3
+    /* use int1 */
+    #define USB_INTR_CFG_SET        ((1 << ISC10) | (1 << ISC11))
+    #define USB_INTR_ENABLE_BIT     INT1
+    #define USB_INTR_PENDING_BIT    INTF1
+    #define USB_INTR_VECTOR         INT1_vect
+
+#elif defined(HARDWARE_rumpus)
+    /* isp pins */
+    #define SPI_PORTNAME    B
+    #define SPI_SS      PB2
+    #define SPI_MOSI    PB3
+    #define SPI_MISO    PB4
+    #define SPI_SCK     PB5
+    #define SPI_CS      PB2
+
+    /* led pins */
+    #define LED1_PORTNAME   C
+    #define LED1_PIN        PC4
+    #define LED2_PORTNAME   D
+    #define LED2_PIN        PD3
+
+    /* usb */
+    #define USB_CFG_IOPORTNAME      D
+    #define USB_CFG_DMINUS_BIT      4
+    #define USB_CFG_DPLUS_BIT       2
+    #define USB_CFG_PULLUP_IOPORTNAME   B
+    #define USB_CFG_PULLUP_BIT          0
+
+#else
+    #error "unknown hardware platform!"
+#endif
 
 /* try to connect to device at lowest spi data rate */
 #define SPI_MAX_TRIES   32

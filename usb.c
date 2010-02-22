@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <avr/pgmspace.h>
 #include <avr/io.h>
+#include "config.h"
 #include "usb.h"
 #include "usbdrv/usbdrv.h"
 #include "spi.h"

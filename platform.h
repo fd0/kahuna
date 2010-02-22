@@ -69,6 +69,10 @@
 #define UDR0 UDR
 #endif
 
+#if !defined(U2X0) && defined(U2X)
+#define U2X0 U2X
+#endif
+
 /* timer */
 #if !defined(OCR2A) && defined(OCR2)
 #define OCR2A OCR2
