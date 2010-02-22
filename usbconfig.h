@@ -346,7 +346,7 @@ section at the end of this file).
 #define USB_CFG_DESCR_PROPS_STRING_0                0
 #define USB_CFG_DESCR_PROPS_STRING_VENDOR           0
 #define USB_CFG_DESCR_PROPS_STRING_PRODUCT          0
-#define USB_CFG_DESCR_PROPS_STRING_SERIAL_NUMBER    USB_PROP_LENGTH(22)
+#define USB_CFG_DESCR_PROPS_STRING_SERIAL_NUMBER    0
 #define USB_CFG_DESCR_PROPS_HID                     0
 #define USB_CFG_DESCR_PROPS_HID_REPORT              0
 #define USB_CFG_DESCR_PROPS_UNKNOWN                 0
@@ -367,5 +367,11 @@ section at the end of this file).
 /* #define USB_INTR_PENDING        GIFR */
 #define USB_INTR_PENDING_BIT    INTF1
 #define USB_INTR_VECTOR         INT1_vect
+
+/* usb serial */
+#if defined(USB_SERIAL) && defined(USB_SERIAL_LEN)
+#define USB_CFG_SERIAL_NUMBER USB_SERIAL
+#define USB_CFG_SERIAL_NUMBER_LEN USB_SERIAL_LEN
+#endif
 
 #endif /* __usbconfig_h_included__ */

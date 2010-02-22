@@ -7,6 +7,9 @@
 # hardware platform
 HARDWARE = kahuna
 
+# usb serial number
+USB_SERIAL = "8eea75b0decb11e5"
+
 # controller
 MCU = atmega8
 
@@ -45,7 +48,11 @@ DEV = usb
 # further flags for avrdude
 AVRDUDE_FLAGS =
 
-CFLAGS += -DHARDWARE=$(HARDWARE)
+# magic for usb serial
+USB_SERIAL_TEXT=$(shell echo $(USB_SERIAL) | sed "s/./'\\0',/g")
+USB_SERIAL_LEN=$(shell echo -n $(USB_SERIAL) | wc -c)
+
+CFLAGS += -DHARDWARE="$(HARDWARE)" -DUSB_SERIAL="$(USB_SERIAL_TEXT)" -DUSB_SERIAL_LEN="$(USB_SERIAL_LEN)"
 
 ####################################################
 # 'make' configuration
