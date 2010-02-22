@@ -1,12 +1,11 @@
 ####################################################
-# rumpusbasp
+# kahuna -- simple USBasp compatible isp programmer
 # 'make' configuration file for avr-gcc
 # by fd0@koeln.ccc.de, for U23 2008
-# released into public domain
 ####################################################
 
-# hardware revision
-HARDWARE = 2
+# hardware platform
+HARDWARE = kahuna
 
 # controller
 MCU = atmega8

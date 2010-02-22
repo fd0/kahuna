@@ -1,4 +1,4 @@
-/* configuration file for rumpusbasp */
+/* configuration file for kahuna */
 
 #include "macros.h"
 

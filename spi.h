@@ -1,6 +1,5 @@
 /*
- * simple USBasp compatible isp programmer
- * for the rumpus development board
+ * kahuna -- simple USBasp compatible isp programmer
  *
  *   by Alexander Neumann <alexander@lochraster.org>
  *

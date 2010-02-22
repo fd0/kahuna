@@ -1,5 +1,5 @@
 /*
- * unzap firmware
+ * kahuna -- simple USBasp compatible isp programmer
  *
  * (c) by Alexander Neumann <alexander@lochraster.org>
  *
