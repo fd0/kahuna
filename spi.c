@@ -23,6 +23,7 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
+#include <stdbool.h>
 #include <avr/io.h>
 #include <util/delay.h>
 #include "spi.h"
@@ -36,7 +37,15 @@
 #define ISP_WRITE_FLASH 0x40
 #define ISP_WRITE_PAGE  0x4C
 
-#define spi_delay() _delay_loop_2(F_CPU/1000000)
+struct spi_state_t {
+    enum {
+        HARDWARE = 0,
+        SOFTWARE,
+    } mode;
+    uint16_t delay;
+};
+
+struct spi_state_t spi;
 
 static void spi_device_reset(void)
 {
@@ -45,7 +54,7 @@ static void spi_device_reset(void)
 
     /* un-reset device, wait, reset device again */
     SPI_PORT |= _BV(SPI_CS);
-    spi_delay();
+    _delay_loop_2(spi.delay*2);
     SPI_PORT &= ~_BV(SPI_CS);
 }
 
@@ -66,19 +75,26 @@ static uint8_t spi_magicbytes(void)
     return echo;
 }
 
-void spi_enable(void)
+static void spi_enable_hardware(void)
 {
-    /* configure MOSI, SCK and SS as output and MISO as input */
-    SPI_DDR |= _BV(SPI_MOSI) | _BV(SPI_SCK) | _BV(SPI_CS);
-    SPI_DDR &= ~_BV(SPI_MISO);
-
-    /* set SS high, SCK and MOSI low and MISO pullup off */
-    SPI_PORT |= _BV(SPI_CS);
-    SPI_PORT &= ~(_BV(SPI_MOSI) | _BV(SPI_SCK) | _BV(SPI_MISO));
-
     /* initialize spi hardware, prescaler 128 */
     SPCR = _BV(SPE) | _BV(MSTR) | _BV(SPR0) | _BV(SPR1);
     SPSR = _BV(SPIF);
+
+    /* set delay (for spi_device_reset, multiplied by 10,
+     * used with _delay_loop_2()) */
+    spi.delay = F_CPU/1000000;
+}
+
+void spi_enable(void)
+{
+    /* configure MOSI, SCK and CS as output and MISO as input */
+    SPI_DDR |= _BV(SPI_MOSI) | _BV(SPI_SCK) | _BV(SPI_CS);
+    SPI_DDR &= ~_BV(SPI_MISO);
+
+    /* set CS high, SCK and MOSI low and MISO pullup off */
+    SPI_PORT |= _BV(SPI_CS);
+    SPI_PORT &= ~(_BV(SPI_MOSI) | _BV(SPI_SCK) | _BV(SPI_MISO));
 
     /* if CS pin is not on SS pin, enable pullup for SS pin */
 #if SPI_CS != SPI_SS
@@ -89,23 +105,65 @@ void spi_enable(void)
     SPI_PORT &= ~_BV(SPI_CS);
 }
 
-void spi_disable(void)
+static void spi_disable_hardware(void)
 {
     /* disable spi hardware */
     SPCR = 0;
+}
+
+void spi_disable(void)
+{
+    spi_disable_hardware();
 
     /* configure all pins as inputs */
     SPI_DDR &= ~(_BV(SPI_MOSI) | _BV(SPI_SCK) | _BV(SPI_CS) | _BV(SPI_MISO));
     SPI_PORT &= ~(_BV(SPI_MOSI) | _BV(SPI_SCK) | _BV(SPI_CS) | _BV(SPI_MISO));
 }
 
-/* returns 0 if device has been put into programming mode, 1 otherwise */
-uint8_t isp_attach(void)
+uint8_t spi_send(uint8_t data)
+{
+    if (spi.mode == HARDWARE) {
+        SPDR = data;
+        while(!(SPSR & _BV(SPIF)));
+        return SPDR;
+    } else {
+        uint8_t recv = 0;
+
+        for (uint8_t i = 0; i < 8; i++) {
+
+            if (data & _BV(7))
+                /* set MOSI high -> send one */
+                SPI_PORT |= _BV(SPI_MOSI);
+            else
+                /* set MOSI low -> send zero */
+                SPI_PORT &= ~_BV(SPI_MOSI);
+
+            /* read data at MISO pin */
+            recv <<= 1;
+            if (SPI_PIN & _BV(SPI_MISO))
+                recv |= 1;
+
+            /* rising edge */
+            SPI_PORT |= _BV(SPI_SCK);
+            _delay_loop_2(spi.delay);
+            /* falling edge */
+            SPI_PORT &= ~_BV(SPI_SCK);
+            _delay_loop_2(spi.delay);
+
+            data <<= 1;
+        }
+
+        return recv;
+    }
+}
+
+/* returns true if device has been put into programming mode, false otherwise */
+static bool isp_attach_hardware(void)
 {
     uint8_t success = 0;
 
     /* try to connect with lowest spi frequency first */
-    uint8_t count = SPI_MAX_TRIES;
+    uint8_t count = SPI_MAX_TRIES_HW;
     do {
         if (spi_magicbytes() == 0x53) {
             /* device has been put into programming mode */
@@ -116,7 +174,7 @@ uint8_t isp_attach(void)
 
     if (!success)
         /* device cannot be reached */
-        return 1;
+        return false;
 
 #if (_BV(SPR0) | _BV(SPR1)) != 3
 #warning "spi prescaler bits SPR0 and SPR1 are not aligned!"
@@ -143,23 +201,109 @@ uint8_t isp_attach(void)
     /* test again, if this prescaler works */
     if (spi_magicbytes() != 0x53)
         /* device cannot be reached */
-        return 1;
+        return false;
 
     debug_putc('b');
     debug_putc(SPCR & (_BV(SPR0) | _BV(SPR1)));
 #endif
 
+    return true;
+}
+
+/* returns true if device has been put into programming mode, false otherwise */
+static bool isp_attach_software(void)
+{
+    /* try to connect */
+    for (uint8_t count = 0; count < SPI_MAX_TRIES_SW; count++) {
+        if (spi_magicbytes() == 0x53) {
+            /* device has been put into programming mode */
+            return true;
+        }
+    }
+
+    /* device does not react */
+    return false;
+}
+
+/* returns true if device has been put into programming mode, false otherwise */
+bool isp_attach(uint8_t freq)
+{
+    if (freq == 0) {
+        /* try auto */
+        debug_putc('A');
+
+        /* try hardware (hardware is enabled and configured after call to this function) */
+        spi_enable_hardware();
+        spi.mode = HARDWARE;
+        debug_putc('H');
+        if (isp_attach_hardware()) {
+            debug_putc('t');
+            return true;
+        }
+
+        /* else disable hardware */
+        spi_disable_hardware();
+        spi.mode = SOFTWARE;
+        debug_putc('S');
+
+        /* and try software (with frequency F_CPU/4/150 =~ 26-33khz) */
+        spi.delay = DEFAULT_SPI_SW_DELAY;
+        if (isp_attach_software()) {
+            spi.mode = SOFTWARE;
+            debug_putc('t');
+            return true;
+        }
+    } else {
+        /* manual spi, in software */
+        debug_putc('M');
+        debug_putc(freq);
+
+        spi_disable_hardware();
+        spi.mode = SOFTWARE;
+
+        /* find correct delay value:
+         * USBASP_ISP_SCK_AUTO   0
+         * USBASP_ISP_SCK_0_5    1    500 Hz
+         * USBASP_ISP_SCK_1      2      1 kHz
+         * USBASP_ISP_SCK_2      3      2 kHz
+         * USBASP_ISP_SCK_4      4      4 kHz
+         * USBASP_ISP_SCK_8      5      8 kHz
+         * USBASP_ISP_SCK_16     6     16 kHz
+         * USBASP_ISP_SCK_32     7     32 kHz
+         * USBASP_ISP_SCK_93_75  8     93.75 kHz
+         * USBASP_ISP_SCK_187_5  9    187.5  kHz
+         * USBASP_ISP_SCK_375    10   375 kHz
+         * USBASP_ISP_SCK_750    11   750 kHz
+         * USBASP_ISP_SCK_1500   12   1.5 MHz
+         */
+        switch (freq) {
+            case 1:     spi.delay = F_CPU/4/500; break;
+            case 2:     spi.delay = F_CPU/4/1000; break;
+            case 3:     spi.delay = F_CPU/4/2000; break;
+            case 4:     spi.delay = F_CPU/4/4000; break;
+            case 5:     spi.delay = F_CPU/4/8000; break;
+            case 6:     spi.delay = F_CPU/4/16000; break;
+            case 7:     spi.delay = F_CPU/4/32000; break;
+            case 8:     spi.delay = F_CPU/4/93750; break;
+            case 9:     spi.delay = F_CPU/4/187500; break;
+            case 10:    spi.delay = F_CPU/4/375000; break;
+            case 11:    spi.delay = F_CPU/4/750000; break;
+            default:    spi.delay = F_CPU/4/1500000; break;
+        }
+        debug_putc(HI8(spi.delay));
+        debug_putc(LO8(spi.delay));
+
+        if (isp_attach_software()) {
+            spi.mode = SOFTWARE;
+            debug_putc('t');
+            return true;
+        }
+    }
+
     return 0;
 }
 
-uint8_t spi_send(uint8_t data)
-{
-    SPDR = data;
-    while(!(SPSR & _BV(SPIF)));
-    return SPDR;
-}
-
-uint8_t isp_busy(void)
+bool isp_busy(void)
 {
     spi_send(ISP_READY);
     spi_send(0);

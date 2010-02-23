@@ -60,7 +60,8 @@
 #endif
 
 /* try to connect to device at lowest spi data rate */
-#define SPI_MAX_TRIES   32
+#define SPI_MAX_TRIES_HW    32
+#define SPI_MAX_TRIES_SW    8
 
 /* maximum eeprom and flash write timeouts (for _delay_loop_2) */
 #define EEPROM_TIMEOUT  (F_CPU/100/4)       /* 10ms */
@@ -73,9 +74,12 @@
 #define FLASH_PAGE_POLL_TIMEOUT  (F_CPU/10000/4) /* 100uS */
 #define FLASH_PAGE_POLL_TRIES    100             /* 100 times */
 
+#define DEFAULT_SPI_SW_DELAY    150 /* default delay for software spi, -> 26-33khz (16-20MHz) */
+
 /* more macros */
 #define SPI_PORT    _OUTPORT(SPI_PORTNAME)
 #define SPI_DDR     _DDRPORT(SPI_PORTNAME)
+#define SPI_PIN     _INPORT(SPI_PORTNAME)
 
 #define LED1_DDR    _DDRPORT(LED1_PORTNAME)
 #define LED1_PORT   _OUTPORT(LED1_PORTNAME)

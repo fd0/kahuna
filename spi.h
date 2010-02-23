@@ -27,6 +27,7 @@
 #define __SPI_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 void spi_enable(void);
 void spi_disable(void);
@@ -34,8 +35,8 @@ void spi_disable(void);
 uint8_t spi_send(uint8_t data);
 
 /* returns 0 if device has been put into programming mode, 1 otherwise */
-uint8_t isp_attach(void);
-uint8_t isp_busy(void);
+bool isp_attach(uint8_t freq);
+bool isp_busy(void);
 uint8_t isp_read_flash(uint16_t address);
 uint8_t isp_read_eeprom(uint16_t address);
 void isp_write_eeprom(uint16_t address, uint8_t data);

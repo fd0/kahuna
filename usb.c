@@ -47,6 +47,20 @@
 #define PROG_BLOCKFLAG_FIRST    1
 #define PROG_BLOCKFLAG_LAST     2
 
+#define USBASP_ISP_SCK_AUTO   0
+#define USBASP_ISP_SCK_0_5    1   /* 500 Hz */
+#define USBASP_ISP_SCK_1      2   /*   1 kHz */
+#define USBASP_ISP_SCK_2      3   /*   2 kHz */
+#define USBASP_ISP_SCK_4      4   /*   4 kHz */
+#define USBASP_ISP_SCK_8      5   /*   8 kHz */
+#define USBASP_ISP_SCK_16     6   /*  16 kHz */
+#define USBASP_ISP_SCK_32     7   /*  32 kHz */
+#define USBASP_ISP_SCK_93_75  8   /*  93.75 kHz */
+#define USBASP_ISP_SCK_187_5  9   /* 187.5  kHz */
+#define USBASP_ISP_SCK_375    10  /* 375 kHz   */
+#define USBASP_ISP_SCK_750    11  /* 750 kHz   */
+#define USBASP_ISP_SCK_1500   12  /* 1.5 MHz   */
+
 /* additional functions */
 #define FUNC_ECHO               0x17
 
@@ -86,6 +100,7 @@ struct options_t {
     uint16_t pagecounter;
     uint8_t address_mode; /* 0 for old, 1 for new mode */
     enum mode_t mode;
+    uint8_t freq;
 };
 
 struct options_t opts;
@@ -135,7 +150,7 @@ usbMsgLen_t usbFunctionSetup(uchar data[8])
         return USB_NO_MSG;
     } else if (req->bRequest == USBASP_FUNC_ENABLEPROG) {
         debug_putc('p');
-        buf[0] = isp_attach();
+        buf[0] = !isp_attach(opts.freq);
         len = 1;
     } else if (req->bRequest == USBASP_FUNC_WRITEFLASH) {
 
@@ -186,6 +201,7 @@ usbMsgLen_t usbFunctionSetup(uchar data[8])
         opts.address_mode = 1;
         opts.address = req->wValue.word;
     } else if (req->bRequest == USBASP_FUNC_SETISPSCK) {
+        opts.freq = data[2];
         buf[0] = 0;
         len = 1;
 #ifdef ENABLE_ECHO_FUNC
@@ -279,4 +295,5 @@ void usb_disable(void)
 void usb_enable(void)
 {
     usbDeviceConnect();
+    opts.freq = USBASP_ISP_SCK_AUTO;
 }
