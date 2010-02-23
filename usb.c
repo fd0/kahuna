@@ -256,6 +256,8 @@ uchar usbFunctionWrite(uchar *data, uchar len)
         data++;
     }
 
+    LED1_TOGGLE();
+
     return ret;
 }
 
@@ -273,6 +275,8 @@ uchar usbFunctionRead(uchar *data, uchar len)
     }
 
     opts.bytecount -= len;
+
+    LED1_TOGGLE();
 
     return len;
 }
