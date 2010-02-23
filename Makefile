@@ -18,7 +18,7 @@ F_CPU = 16000000UL
 
 # main application name (without .hex)
 # eg 'test' when the main function is defined in 'test.c'
-TARGET = rumpusbasp
+TARGET = kahuna
 
 # c sourcecode files
 # eg. 'test.c foo.c foobar/baz.c'
