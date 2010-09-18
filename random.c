@@ -23,30 +23,30 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
-#ifndef __USB_H
-#define __USB_H
-
+#include <avr/io.h>
 #include <stdint.h>
-#include <avr/eeprom.h>
 
-/* api functions */
+/* implementation of http://www.rn-wissen.de/index.php/Zufallszahlen_mit_avr-gcc
+ *
+ * random_seed is an uint16_t which will be initialized by XORing all words in
+ * memory before initialization.  this should ensure a different value for each
+ * device, even after reset (previous value of random_seed is also XORed) */
+uint16_t random_seed __attribute__ ((section (".noinit")));
 
-/* initialize the usb stack, D+ and D- pins MUST be configured as input, with
- * pull-ups disabled, interrupts MUST be enabled AFTER calling usb_init() */
-void usb_init(void);
+/* NEVER CALL DIRECTLY, WILL BE CALLED BY STARTUP CODE! */
+void __init_random (void) __attribute__ ((naked))
+    __attribute__ ((section (".init3")));
 
-/* poll at least every 50ms */
-void usb_poll(void);
+/* NEVER CALL DIRECTLY, WILL BE CALLED BY STARTUP CODE! */
+void __init_random (void)
+{
+    uint16_t seed = 0;
+    extern uint16_t __noinit_start;
+    uint16_t *ptr = &__noinit_start;
 
-void usb_disable(void);
-void usb_enable(void);
+    do {
+        seed ^= *(ptr++);
+    } while (ptr < (uint16_t *)RAMEND);
 
-/* usb serial number is stored in eeprom */
-struct eeprom_storage_t {
-    uint8_t serial[CONFIG_USB_SERIAL_LEN];
-    uint16_t crc;
-};
-
-extern EEMEM struct eeprom_storage_t eeprom_storage;
-
-#endif
+    random_seed = seed;
+}

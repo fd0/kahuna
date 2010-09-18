@@ -92,3 +92,6 @@
 #define LED2_ON()   LED2_PORT |= _BV(LED2_PIN)
 #define LED2_OFF()  LED2_PORT &= ~_BV(LED2_PIN)
 #define LED2_TOGGLE()   LED2_PORT ^= _BV(LED2_PIN)
+
+/* usb serial number configuration */
+#define CONFIG_USB_SERIAL_LEN 16

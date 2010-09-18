@@ -24,13 +24,17 @@
  */
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <avr/pgmspace.h>
 #include <avr/io.h>
+#include <avr/eeprom.h>
+#include <util/crc16.h>
 #include "config.h"
 #include "usb.h"
 #include "usbdrv/usbdrv.h"
 #include "spi.h"
 #include "debug.h"
+#include "random.h"
 
 /* USBasp requests, taken from the original USBasp sourcecode */
 #define USBASP_FUNC_CONNECT     1
@@ -83,6 +87,9 @@
                                    } while(0);
 #endif
 
+/* eeprom storage for usb serial number */
+EEMEM struct eeprom_storage_t eeprom_storage;
+
 /* programmer state and options */
 enum mode_t {
     IDLE = 0,
@@ -105,6 +112,8 @@ struct options_t {
 
 struct options_t opts;
 
+/* usb serial number, will be setup by usb_init() */
+int usbDescriptorStringSerialNumber[CONFIG_USB_SERIAL_LEN+1];
 
 usbMsgLen_t usbFunctionSetup(uchar data[8])
 {
@@ -283,6 +292,50 @@ uchar usbFunctionRead(uchar *data, uchar len)
 
 void usb_init(void)
 {
+    /* init usb serial header */
+    usbDescriptorStringSerialNumber[0] = USB_STRING_DESCRIPTOR_HEADER(CONFIG_USB_SERIAL_LEN);
+
+    /* read usb serial number from eeprom */
+    uint16_t crc = 0;
+    for (uint8_t i = 0; i < CONFIG_USB_SERIAL_LEN; i++) {
+        uint8_t data = eeprom_read_byte(&eeprom_storage.serial[i]);
+        usbDescriptorStringSerialNumber[i+1] = data;
+        crc = _crc16_update(crc, data);
+    }
+
+    /* if checksum does not match, generate new checksum */
+    if (crc != eeprom_read_word(&eeprom_storage.crc)) {
+        LED1_ON();
+
+        /* generate usb serial number and write to eeprom */
+        crc = 0;
+        srand(random_seed);
+        for (uint8_t pos = 1; pos < CONFIG_USB_SERIAL_LEN+1; pos += 4) {
+            uint16_t serial = rand();
+
+            uint8_t k = pos;
+            for (uint8_t j = 0; j < 4; j++) {
+                uint8_t v = serial & 0x0f;
+                serial >>= 4;
+
+                uint8_t data;
+
+                if ( v >= 10)
+                    data = 'a'+v-10;
+                else
+                    data = '0'+v;
+
+                usbDescriptorStringSerialNumber[k] = data;
+                eeprom_write_byte(&eeprom_storage.serial[k-1], data);
+                crc = _crc16_update(crc, data);
+                k++;
+            }
+        }
+
+        /* write checksum */
+        eeprom_write_word(&eeprom_storage.crc, crc);
+    }
+
     usbInit();
 }
 

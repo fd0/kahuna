@@ -7,9 +7,6 @@
 # hardware platform
 HARDWARE = kahuna
 
-# usb serial number
-USB_SERIAL = "8eea75b0decb11e5"
-
 # controller
 MCU = atmega8
 
@@ -47,10 +44,6 @@ PROG = usbasp
 DEV = usb
 # further flags for avrdude
 AVRDUDE_FLAGS =
-
-# magic for usb serial
-USB_SERIAL_TEXT=$(shell echo $(USB_SERIAL) | sed "s/./'\\0',/g")
-USB_SERIAL_LEN=$(shell echo -n $(USB_SERIAL) | wc -c)
 
 ####################################################
 # 'make' configuration
@@ -97,9 +90,9 @@ ifeq ($(DEBUG),1)
 	CFLAGS += -DDEBUG
 endif
 
-# set hardware platform and usb serial number
-CFLAGS += "-DHARDWARE_$(HARDWARE)" -DUSB_SERIAL="$(USB_SERIAL_TEXT)" -DUSB_SERIAL_LEN="$(USB_SERIAL_LEN)"
-ASFLAGS += "-DHARDWARE_$(HARDWARE)" -DUSB_SERIAL="$(USB_SERIAL_TEXT)" -DUSB_SERIAL_LEN="$(USB_SERIAL_LEN)"
+# set hardware platform
+CFLAGS += "-DHARDWARE_$(HARDWARE)"
+ASFLAGS += "-DHARDWARE_$(HARDWARE)"
 
 ####################################################
 # avrdude configuration
