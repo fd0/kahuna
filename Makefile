@@ -7,6 +7,25 @@
 # hardware platform
 HARDWARE = kahuna
 
+####################################################
+# Note: 
+#  To flash the Kahuna firmware to an empty ATmega8 (no bootloader, no self-update):
+#  - Connect an ISP (can be Arduino as ISP) to the 6- or 10-pin header on the Kahuna, 
+#      including VCC and ground. Make sure the programmer pulls the T_RST pin low.
+#  - Do not connect USB to the Kahuna!
+#  - Set the jumpers (i.e. close) T_VCC and RSTIN.
+#  - Edit the Makefile and set PROG and DEV according to your setup
+#  - run 'make all'
+#  - run 'make program'
+#  - run 'make fuses'
+#  - The red LED on the Kahuna indicates that it is creating a new USB ID. 
+#      This should only happen once every time the EEPROM on the chip is erased, 
+#      e.g. when reflashing.
+#  - Disconnect the programmer and remove the jumpers from the Kahuna. Plug USB into 
+#      the Kahuna. The green LED should start blinking to show it is ready. 
+####################################################
+
+
 # controller
 MCU = atmega8
 
@@ -40,8 +59,12 @@ DEBUG = 0
 
 # avrdude programmer protocol
 PROG = usbasp
+# use avrisp for Arduino as ISP
+#PROG = avrisp 
+
 # avrdude programmer device
 DEV = usb
+
 # further flags for avrdude
 AVRDUDE_FLAGS =
 
@@ -99,6 +122,8 @@ ASFLAGS += "-DHARDWARE_$(HARDWARE)"
 ####################################################
 ifeq ($(MCU),atmega8)
 	AVRDUDE_MCU=m8
+	HFUSE=0xc9  
+	LFUSE=0x3f
 endif
 ifeq ($(MCU),atmega48)
 	AVRDUDE_MCU=m48
@@ -148,6 +173,9 @@ program-%: %.hex
 program-eeprom-%: %.eep.hex
 	$(AVRDUDE) $(AVRDUDE_FLAGS) -c $(PROG) -P $(DEV) -U eeprom:w:$<
 
+fuses:
+	$(AVRDUDE) $(AVRDUDE_FLAGS) -c $(PROG) -P $(DEV) -u -U hfuse:w:$(HFUSE):m -U lfuse:w:$(LFUSE):m	
+	
 # special programming targets
 %.hex: %.elf
 	$(OBJCOPY) -O ihex -R .eeprom $< $@
